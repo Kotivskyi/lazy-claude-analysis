@@ -218,127 +218,12 @@ def analyze_all_sessions(cutoff_date=None):
     }
 
 
-def print_report(data):
-    """Print formatted analysis report."""
-    cutoff = data["cutoff_date"]
-
-    print("=" * 70)
-    print("CLAUDE CODE SESSION ANALYSIS REPORT")
-    print(f"  Cutoff date: {cutoff}")
-    print("=" * 70)
-
-    # 1. Totals
-    print(f"\n{'─' * 40}")
-    print("1. OVERALL TOTALS")
-    print(f"{'─' * 40}")
-    print(f"  Sessions analyzed (from JSONL):  {data['total_sessions']}")
-    print(f"  Total tool calls:                {data['total_tool_calls']}")
-    print(f"  Total thinking blocks:           {data['total_thinking_blocks']}")
-    print(f"  Thinking with content:           {data['total_thinking_with_content']}")
-    print(f"  Thinking redacted (empty):       {data['total_thinking_blocks'] - data['total_thinking_with_content']}")
-    print(f"  Versions seen:                   {sorted(data['versions_seen'])}")
-
-    # 2. Tool breakdown
-    print(f"\n{'─' * 40}")
-    print("2. TOOL CALL BREAKDOWN")
-    print(f"{'─' * 40}")
-    for tool, count in data["all_tool_counts"].most_common(25):
-        pct = count / data["total_tool_calls"] * 100 if data["total_tool_calls"] else 0
-        print(f"  {tool:45s} {count:>6}  ({pct:4.1f}%)")
-
-    # 3. Edit vs Write
-    total_edits = data["all_tool_counts"].get("Edit", 0)
-    total_writes = data["all_tool_counts"].get("Write", 0)
-    print(f"\n{'─' * 40}")
-    print("3. EDIT vs WRITE (targeted edits vs full file rewrites)")
-    print(f"{'─' * 40}")
-    print(f"  Edit calls:  {total_edits}")
-    print(f"  Write calls: {total_writes}")
-    if total_edits + total_writes > 0:
-        print(f"  Write ratio: {total_writes / (total_edits + total_writes) * 100:.1f}% full rewrites")
-
-    # 4. Reads before edits
-    print(f"\n{'─' * 40}")
-    print(f"4. READS BEFORE EDITS/WRITES (cutoff: {cutoff})")
-    print(f"{'─' * 40}")
-    pre = data["reads_before_edits_pre"]
-    post = data["reads_before_edits_post"]
-    if pre:
-        print(f"  Before {cutoff}: avg {sum(pre)/len(pre):.2f} reads before edit/write (n={len(pre)})")
-    else:
-        print(f"  Before {cutoff}: no data")
-    if post:
-        print(f"  After  {cutoff}: avg {sum(post)/len(post):.2f} reads before edit/write (n={len(post)})")
-    else:
-        print(f"  After  {cutoff}: no data")
-
-    # 5. Before/after comparison
-    print(f"\n{'─' * 40}")
-    print(f"5. BEFORE vs AFTER {cutoff}")
-    print(f"{'─' * 40}")
-    pre_days = {k: v for k, v in data["daily"].items() if date.fromisoformat(k) < cutoff}
-    post_days = {k: v for k, v in data["daily"].items() if date.fromisoformat(k) >= cutoff}
-
-    def summarize_period(days, label):
-        if not days:
-            print(f"  {label}: no session data")
-            return
-        n_days = len(days)
-        n_sessions = sum(d["sessions"] for d in days.values())
-        n_tools = sum(d["tool_calls"] for d in days.values())
-        n_thinking = sum(d["thinking_blocks"] for d in days.values())
-        n_thinking_content = sum(d["thinking_with_content"] for d in days.values())
-        n_edits = sum(d["edits"] for d in days.values())
-        n_writes = sum(d["writes"] for d in days.values())
-
-        print(f"  {label}:")
-        print(f"    Active days:        {n_days}")
-        print(f"    Sessions:           {n_sessions} ({n_sessions/n_days:.1f}/day)")
-        print(f"    Tool calls:         {n_tools} ({n_tools/n_days:.1f}/day)")
-        print(f"    Thinking blocks:    {n_thinking} ({n_thinking/n_days:.1f}/day)")
-        print(f"    - with content:     {n_thinking_content}")
-        print(f"    - redacted (empty): {n_thinking - n_thinking_content}")
-        print(f"    Edits:              {n_edits}")
-        print(f"    Writes:             {n_writes}")
-        if n_edits + n_writes > 0:
-            print(f"    Write ratio:        {n_writes/(n_edits+n_writes)*100:.1f}%")
-
-    summarize_period(pre_days, f"BEFORE {cutoff}")
-    summarize_period(post_days, f"AFTER  {cutoff}")
-
-    # 6. Daily timeline
-    print(f"\n{'─' * 40}")
-    print("6. DAILY TIMELINE")
-    print(f"{'─' * 40}")
-    print(f"  {'Date':12s} {'Sess':>5s} {'Tools':>6s} {'Think':>6s} {'Redact':>7s} {'Reads/Ed':>8s} {'Edit':>5s} {'Write':>5s} {'W%':>5s}")
-    for day_key in sorted(data["daily"].keys()):
-        d = data["daily"][day_key]
-        rbe = d["reads_before_edits"]
-        rbe_avg = f"{sum(rbe)/len(rbe):.1f}" if rbe else "n/a"
-        edits = d["edits"]
-        writes = d["writes"]
-        w_pct = f"{writes/(edits+writes)*100:.0f}" if edits + writes > 0 else "n/a"
-        marker = " <<" if date.fromisoformat(day_key) == cutoff else ""
-        print(f"  {day_key:12s} {d['sessions']:5d} {d['tool_calls']:6d} {d['thinking_blocks']:6d} "
-              f"{d['thinking_blocks']-d['thinking_with_content']:7d} {rbe_avg:>8s} {edits:5d} {writes:5d} {w_pct:>5s}{marker}")
-
-    # 7. Supplemental stats
+def load_stats_cache():
+    """Load supplemental stats from stats-cache.json if available."""
     if STATS_CACHE.exists():
-        print(f"\n{'─' * 40}")
-        print("7. SUPPLEMENTAL (stats-cache.json)")
-        print(f"{'─' * 40}")
         with open(STATS_CACHE) as f:
-            stats = json.load(f)
-        print(f"  Total sessions (all time): {stats.get('totalSessions', 'N/A')}")
-        print(f"  Total messages (all time): {stats.get('totalMessages', 'N/A')}")
-        print(f"  First session:             {stats.get('firstSessionDate', 'N/A')}")
-        print(f"  Stats cached through:      {stats.get('lastComputedDate', 'N/A')}")
-        model_usage = stats.get("modelUsage", {})
-        print(f"\n  Model usage:")
-        for model, usage in model_usage.items():
-            print(f"    {model}:")
-            print(f"      Output tokens:         {usage.get('outputTokens', 0):>12,}")
-            print(f"      Cache read tokens:     {usage.get('cacheReadInputTokens', 0):>12,}")
+            return json.load(f)
+    return None
 
 
 def main():
@@ -351,7 +236,10 @@ def main():
             sys.exit(1)
 
     data = analyze_all_sessions(cutoff)
-    print_report(data)
+    data["stats_cache"] = load_stats_cache()
+
+    from render_terminal import render
+    render(data)
 
 
 if __name__ == "__main__":

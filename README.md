@@ -63,31 +63,44 @@ The script reads from your local Claude Code data:
 ## Example Output
 
 ```
-======================================================================
-CLAUDE CODE SESSION ANALYSIS REPORT
-  Cutoff date: 2026-03-08
-======================================================================
+╔══════════════════════════════════════════════════════════════════╗
+║  CLAUDE CODE BEHAVIORAL ANALYSIS                                 ║
+║  67 sessions · 19 active days · 2026-03-10 → 2026-04-07          ║
+║  Cutoff: 2026-03-08 (thinking redaction deployment)              ║
+╚══════════════════════════════════════════════════════════════════╝
 
-1. OVERALL TOTALS
-  Sessions analyzed (from JSONL):  61
-  Total tool calls:                2976
-  Thinking redacted (empty):       440 (96.7%)
+  HEALTH DASHBOARD
+  ──────────────────────────────────────────────────────────
+  ●  Thinking Redaction    96.9%                 ███████████████▁▇█
+  ●  Reads Before Edits    0.31 avg            ▁▅▂▂█▂▃▁▁▁▃ ▂▄▂▁▁
+  ●  Write Ratio           27.4%                  ▃▁▆▂▁▂▁▁▅▄▁ ██▆▃▄
+  ●  Edit vs Write        339 / 128
+  ──────────────────────────────────────────────────────────
 
-3. EDIT vs WRITE
-  Edit calls:  321
-  Write calls: 120
-  Write ratio: 27.2% full rewrites
+  WEEKLY TRENDS
+  ────────────────────────────────────────────────────────────────────────
+  Reads/Edit = avg Read calls before each Edit/Write (higher = more careful)
+  Week            Sess  Tools   Reads/Edit       Write%           Redact%
+  ────────────────────────────────────────────────────────────────────────
+  W11 Mar 09         1      0   —              —              —
+  W12 Mar 16         8    321   0.7            21%            100%
+  W13 Mar 23         9   1458   0.3 ↓0.4       16% ↓5%        100% →
+  W14 Mar 30        35   1050   0.3 →          52% ↑36%       91% ↓9%
+  W15 Apr 06        14    297   0.2 ↓0.1       36% ↓16%       98% ↑7%
+  ────────────────────────────────────────────────────────────────────────
 
-4. READS BEFORE EDITS/WRITES
-  After 2026-03-08: avg 0.32 reads before edit/write (n=441)
-
-6. DAILY TIMELINE
-  Date          Sess  Tools  Think  Redact Reads/Ed  Edit Write    W%
-  2026-03-17       2     54      8       8      0.1     8     3    27
-  2026-03-19       3    215     10      10      1.1    18     2    10
+  DAILY TIMELINE
+  ────────────────────────────────────────────────────────────────────────────────
+  Reads/Edit    ▁▅▂▂█▂▃▁▁▁▃ ▂▄▂▁▁
+  Write %       ▃▁▆▂▁▂▁▁▅▄▁ ██▆▃▄
+  ────────────────────────────────────────────────────────────────────────────────
+  Date          Sess  Tools  Think Redct%  Rd/Ed  Edit Write    W%
+  ────────────────────────────────────────────────────────────────────────────────
+  2026-03-17       2     54      8    100    0.1     8     3    27
+  2026-03-19       3    215     10    100    1.1    18     2    10
   ...
-  2026-04-05       6    189     31      17      0.3     9    13    59
-  2026-04-07       2     41     12      12      0.2     0     5   100
+  2026-04-06       6    106     19     95    0.3    14     5    26
+  2026-04-07       8    191     34    100    0.1    18    13    42
 ```
 
 ## Requirements
